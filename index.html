@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0fb9a6">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="取材工作站">
+<title>动物取材工作站 · Lab Sampling Workstation v2</title>
+<style>
+:root{
+  --teal:#0fb9a6; --teal-dark:#0a8f80; --bg:#f4f6f7; --card:#ffffff;
+  --danger:#ff5c72; --danger-bg:#ffe4e8; --text:#1f2a2e; --muted:#7c8a8d;
+  --warn:#fa8c16; --warn-bg:#fff1e6;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);}
+.app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);display:flex;flex-direction:column;padding-bottom:70px;}
+header{background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:#fff;padding:16px 18px 22px;border-radius:0 0 18px 18px;position:sticky;top:0;z-index:5;}
+header h1{margin:0;font-size:18px;font-weight:700;display:flex;align-items:center;gap:6px;}
+header p{margin:4px 0 0;font-size:12px;opacity:.85;}
+.mode-badge{display:inline-block;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;font-size:11px;margin-top:8px;}
+.autosave{font-size:10px;opacity:.7;margin-left:6px;}
+.stats-row{display:flex;gap:10px;margin-top:14px;}
+.stat-card{flex:1;background:rgba(255,255,255,.15);border-radius:12px;padding:10px;text-align:center;cursor:pointer;}
+.stat-card .num{font-size:20px;font-weight:700;}
+.stat-card .label{font-size:11px;opacity:.85;}
+.section{background:var(--card);margin:14px 14px 0;border-radius:14px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.section h2{font-size:14px;margin:0 0 10px;display:flex;align-items:center;gap:6px;justify-content:space-between;}
+.section h2 .h2-actions{font-size:11px;font-weight:400;color:var(--muted);}
+.task-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;gap:8px;}
+.task-item:last-child{border-bottom:none;}
+.task-info .id{font-weight:700;font-size:14px;cursor:pointer;}
+.task-info .meta{font-size:12px;color:var(--muted);margin-top:2px;}
+.task-actions{display:flex;gap:6px;}
+.tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:6px;margin-right:4px;}
+.tag.con{background:#e6f7ff;color:#1890ff;}
+.tag.int{background:var(--warn-bg);color:var(--warn);}
+.tag.overdue{background:var(--danger-bg);color:var(--danger);}
+.tag.soon{background:#fffbe6;color:#d4b106;}
+.btn{border:none;border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;}
+.btn-primary{background:var(--teal);color:#fff;}
+.btn-primary:hover{background:var(--teal-dark);}
+.btn-outline{background:#fff;border:1px solid var(--teal);color:var(--teal-dark);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-icon{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;}
+form label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;}
+form input, form select, form textarea{width:100%;padding:9px 10px;border:1px solid #e2e6e7;border-radius:8px;font-size:14px;background:#fafbfb;}
+form textarea{resize:vertical;min-height:50px;}
+.checklist-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed #eee;font-size:13px;}
+.checklist-item input{width:auto;}
+.checklist-item.done label{text-decoration:line-through;color:var(--muted);}
+.progress-bar{height:6px;background:#eee;border-radius:3px;overflow:hidden;margin-bottom:10px;}
+.progress-fill{height:100%;background:var(--teal);transition:width .3s;}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+th,td{padding:6px 4px;text-align:center;border-bottom:1px solid #f0f0f0;}
+th{color:var(--muted);font-weight:600;position:sticky;top:0;background:#fff;}
+.pill{display:inline-block;width:10px;height:10px;border-radius:50%;}
+.pill.green{background:#52c41a;}
+.pill.red{background:var(--danger);}
+.pill.gray{background:#d9d9d9;}
+.pill.orange{background:var(--warn);}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;display:flex;justify-content:space-around;padding:8px 0;box-shadow:0 -2px 8px rgba(0,0,0,.06);}
+nav button{flex:1;background:none;border:none;font-size:11px;color:var(--muted);padding:6px 0;cursor:pointer;}
+nav button.active{color:var(--teal-dark);font-weight:700;}
+.hidden{display:none !important;}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.small-btn{font-size:11px;padding:5px 10px;border-radius:14px;}
+.empty{color:var(--muted);font-size:12px;text-align:center;padding:16px 0;}
+.field-row{display:flex;gap:8px;}
+.field-row > div{flex:1;}
+.search-box{display:flex;gap:8px;margin-bottom:10px;}
+.search-box input{flex:1;}
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.chip{font-size:11px;padding:4px 10px;border-radius:14px;background:#f0f2f2;color:var(--muted);cursor:pointer;border:1px solid transparent;}
+.chip.active{background:var(--teal);color:#fff;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
+.modal{background:#fff;border-radius:14px;padding:18px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto;}
+.modal h3{margin:0 0 10px;font-size:15px;}
+.modal .close-x{position:absolute;top:14px;right:18px;cursor:pointer;font-size:18px;color:var(--muted);}
+.detail-row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid #f5f5f5;}
+.detail-row span:first-child{color:var(--muted);}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1f2a2e;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:60;opacity:0;transition:opacity .3s;}
+.toast.show{opacity:1;}
+
+.date-wrap{position:relative;}
+.date-wrap input[type="text"].date-fallback{padding-right:70px;}
+.date-quick{position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:11px;background:var(--teal);color:#fff;border:none;border-radius:12px;padding:5px 8px;cursor:pointer;}
+.date-hint{font-size:11px;color:var(--muted);margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>🐭 动物取材工作站 <span class="autosave" id="autosaveTag"></span></h1>
+    <p>孕鼠 / HFD·Semaglutide 队列取材管理 · Lab Sampling Tracker</p>
+    <span class="mode-badge">📦 本地存储模式 Local Storage</span>
+    <div class="stats-row">
+      <div class="stat-card" onclick="switchView('animals')"><div class="num" id="statAnimals">0</div><div class="label">动物档案</div></div>
+      <div class="stat-card" onclick="switchView('samples')"><div class="num" id="statSamples">0</div><div class="label">已取材</div></div>
+      <div class="stat-card" onclick="switchView('overview')"><div class="num" id="statPending">0</div><div class="label">待处理</div></div>
+    </div>
+  </header>
+
+  <!-- OVERVIEW -->
+  <div id="view-overview">
+    <div class="section">
+      <h2>✅ 今天要处理 <span id="todayCount" class="h2-actions"></span></h2>
+      <div class="filter-chips">
+        <span class="chip active" data-f="all" onclick="setTaskFilter('all')">全部</span>
+        <span class="chip" data-f="overdue" onclick="setTaskFilter('overdue')">逾期</span>
+        <span class="chip" data-f="soon" onclick="setTaskFilter('soon')">3天内</span>
+      </div>
+      <div id="todayTasks"><div class="empty">暂无待处理任务</div></div>
+    </div>
+    <div class="section">
+      <h2>📤 数据管理</h2>
+      <div class="toolbar">
+        <button class="btn btn-outline small-btn" onclick="exportData()">导出备份 (JSON)</button>
+        <button class="btn btn-outline small-btn" onclick="exportCSV()">导出CSV</button>
+        <button class="btn btn-outline small-btn" onclick="document.getElementById('importFile').click()">导入恢复</button>
+        <button class="btn btn-danger small-btn" onclick="clearData()">清空数据</button>
+        <input type="file" id="importFile" class="hidden" accept="application/json" onchange="importData(event)">
+      </div>
+    </div>
+  </div>
+
+  <!-- ANIMAL FILES -->
+  <div id="view-animals" class="hidden">
+    <div class="section">
+      <h2 id="animalFormTitle">🗂 新增动物档案</h2>
+      <form id="animalForm">
+        <input type="hidden" id="aEditId">
+        <label>动物编号 Animal ID</label>
+        <input type="text" id="aId" placeholder="例如 D01" required>
+        <div class="field-row">
+          <div>
+            <label>分组 Group</label>
+            <select id="aGroup">
+              <option>CON 对照组</option>
+              <option>HFD 高脂组</option>
+              <option>INT 干预组</option>
+              <option>Semaglutide 组</option>
+            </select>
+          </div>
+          <div>
+            <label>性别 Sex</label>
+            <select id="aSex"><option>F</option><option>M</option></select>
+          </div>
+        </div>
+        <label>计划取材日期 Planned Date</label>
+        <div class="date-wrap">
+          <input type="text" id="aDate" class="date-fallback" placeholder="YYYY-MM-DD" inputmode="numeric" required>
+          <button type="button" class="date-quick" onclick="fillToday('aDate')">今天</button>
+        </div>
+        <div class="date-hint">格式 YYYY-MM-DD，例如 2026-09-02（点击"今天"快速填入，也可用下方日历选择）</div>
+        <input type="date" id="aDatePicker" style="margin-top:4px;" onchange="syncDateFromPicker('aDatePicker','aDate')">
+        <label>备注 Notes</label>
+        <textarea id="aNotes" placeholder="体重、给药时长等"></textarea>
+        <div class="field-row" style="margin-top:12px;">
+          <button type="submit" class="btn btn-primary" id="aSubmitBtn" style="width:100%;">新增档案</button>
+          <button type="button" class="btn btn-outline hidden" id="aCancelBtn" onclick="cancelAnimalEdit()">取消</button>
+        </div>
+      </form>
+    </div>
+    <div class="section">
+      <h2>档案列表 <span class="h2-actions" id="animalListCount"></span></h2>
+      <div class="search-box">
+        <input type="text" id="animalSearch" placeholder="搜索动物编号...">
+      </div>
+      <div class="filter-chips" id="groupFilterChips"></div>
+      <table id="animalTable"><thead><tr><th>ID</th><th>分组</th><th>计划日期</th><th>样本数</th><th>状态</th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- SAMPLING -->
+  <div id="view-sampling" class="hidden">
+    <div class="section">
+      <h2>➕ 新增取材记录</h2>
+      <form id="sampleForm">
+        <label>动物编号</label>
+        <select id="sAnimal"></select>
+        <div class="field-row">
+          <div>
+            <label>取材部位 Tissue</label>
+            <select id="sTissue">
+              <option>下丘脑 Hypothalamus</option>
+              <option>海马 Hippocampus</option>
+              <option>延髓迷走复合体 DVC</option>
+              <option>肝脏 Liver</option>
+              <option>脂肪组织 Adipose</option>
+              <option>血清 Serum</option>
+              <option>脑脊液 CSF</option>
+            </select>
+          </div>
+          <div>
+            <label>保存方式</label>
+            <select id="sMethod"><option>Frozen (-80℃)</option><option>4% PFA 固定</option><option>OCT 包埋</option></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label>数量 Quantity</label>
+            <input type="number" id="sQty" value="1" min="1">
+          </div>
+          <div>
+            <label>存放位置 Location</label>
+            <input type="text" id="sLoc" placeholder="例如 Freezer2-B3">
+          </div>
+        </div>
+        <label>取材日期</label>
+        <div class="date-wrap">
+          <input type="text" id="sDate" class="date-fallback" placeholder="YYYY-MM-DD" inputmode="numeric" required>
+          <button type="button" class="date-quick" onclick="fillToday('sDate')">今天</button>
+        </div>
+        <div class="date-hint">格式 YYYY-MM-DD，例如 2026-08-15（点击"今天"快速填入，也可用下方日历选择）</div>
+        <input type="date" id="sDatePicker" style="margin-top:4px;" onchange="syncDateFromPicker('sDatePicker','sDate')">
+        <button type="submit" class="btn btn-primary" style="margin-top:12px;width:100%;">保存记录</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SAMPLES -->
+  <div id="view-samples" class="hidden">
+    <div class="section">
+      <h2>🧪 样本清单 <span class="h2-actions" id="sampleListCount"></span></h2>
+      <div class="search-box">
+        <input type="text" id="sampleSearch" placeholder="按动物编号或组织搜索...">
+      </div>
+      <table id="sampleTable"><thead><tr><th>动物</th><th>部位</th><th>方式</th><th>数量</th><th>位置</th><th>日期</th><th></th></tr></thead><tbody></tbody></table>
+      <div id="sampleEmpty" class="empty hidden">暂无样本记录</div>
+    </div>
+  </div>
+
+  <!-- SOP -->
+  <div id="view-sop" class="hidden">
+    <div class="section">
+      <h2>📋 取材流程 Checklist</h2>
+      <div class="progress-bar"><div class="progress-fill" id="sopProgress"></div></div>
+      <div id="sopList"></div>
+      <button class="btn btn-outline small-btn" style="margin-top:10px;" onclick="resetSOP()">重置勾选</button>
+    </div>
+    <div class="section">
+      <h2>⚠️ 关键提醒</h2>
+      <ul style="font-size:13px;line-height:1.7;padding-left:18px;margin:0;color:var(--text);">
+        <li>取材前核对动物编号与分组标签，避免混淆</li>
+        <li>组织离体后应在 2 分钟内完成冷冻或固定</li>
+        <li>不同组织使用独立器械，防止交叉污染</li>
+        <li>标签需注明动物ID、组织、日期三项信息</li>
+        <li>灌注前确认麻醉深度符合AVMA/IACUC标准</li>
+      </ul>
+    </div>
+  </div>
+
+  <nav>
+    <button class="nav-btn active" data-view="overview">概览</button>
+    <button class="nav-btn" data-view="animals">档案</button>
+    <button class="nav-btn" data-view="sampling">取材</button>
+    <button class="nav-btn" data-view="samples">样本</button>
+    <button class="nav-btn" data-view="sop">SOP</button>
+  </nav>
+</div>
+
+<div id="detailModal" class="modal-overlay hidden" onclick="if(event.target===this) closeModal()">
+  <div class="modal" style="position:relative;">
+    <span class="close-x" onclick="closeModal()">✕</span>
+    <div id="detailBody"></div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const STORAGE_KEY = "lab_sampling_workstation_v2";
+let db = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+  animals: [
+    {id:"D01", group:"CON 对照组", sex:"F", date:"2026-08-11", notes:"", status:"pending"},
+    {id:"D02", group:"HFD 高脂组", sex:"F", date:"2026-09-02", notes:"", status:"pending"},
+    {id:"D03", group:"INT 干预组", sex:"M", date:"2026-09-02", notes:"", status:"pending"},
+  ],
+  samples: [],
+  sop: [
+    {label:"称重并记录动物体重", done:false},
+    {label:"麻醉/安乐死（按照AVMA指南）", done:false},
+    {label:"心脏灌注 / 采血", done:false},
+    {label:"解剖并分离目标组织", done:false},
+    {label:"组织快速冷冻或固定处理", done:false},
+    {label:"贴标签并录入样本编号", done:false},
+    {label:"更新动物档案状态为已取材", done:false},
+    {label:"样本存入-80℃/OCT柜并记录位置", done:false},
+  ]
+};
+let taskFilter = 'all';
+let groupFilter = 'all';
+const GROUPS = ["CON 对照组","HFD 高脂组","INT 干预组","Semaglutide 组"];
+
+function save(msg){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  render();
+  if(msg) showToast(msg);
+  const tag = document.getElementById('autosaveTag');
+  tag.textContent = '· 已自动保存 ' + new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+function fillToday(id){
+  const today = new Date();
+  const s = today.toISOString().slice(0,10);
+  document.getElementById(id).value = s;
+}
+function syncDateFromPicker(pickerId, targetId){
+  const v = document.getElementById(pickerId).value;
+  if(v) document.getElementById(targetId).value = v;
+}
+function isValidDate(str){
+  return /^\d{4}-\d{2}-\d{2}$/.test(str) && !isNaN(new Date(str).getTime());
+}
+function daysDiff(dateStr){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(dateStr);
+  return Math.round((d-today)/(1000*60*60*24));
+}
+function sampleCount(animalId){ return db.samples.filter(s=>s.animal===animalId).length; }
+
+function setTaskFilter(f){
+  taskFilter = f;
+  document.querySelectorAll('#view-overview .chip').forEach(c=>c.classList.toggle('active', c.dataset.f===f));
+  render();
+}
+
+function render(){
+  document.getElementById('statAnimals').textContent = db.animals.length;
+  document.getElementById('statSamples').textContent = db.samples.length;
+  const pending = db.animals.filter(a=>a.status!=='done').length;
+  document.getElementById('statPending').textContent = pending;
+
+  let dueAnimals = db.animals.filter(a=>a.status!=='done' && daysDiff(a.date) <= 3);
+  if(taskFilter==='overdue') dueAnimals = dueAnimals.filter(a=>daysDiff(a.date)<0);
+  if(taskFilter==='soon') dueAnimals = dueAnimals.filter(a=>daysDiff(a.date)>=0 && daysDiff(a.date)<=3);
+  dueAnimals.sort((a,b)=>daysDiff(a.date)-daysDiff(b.date));
+
+  document.getElementById('todayCount').textContent = dueAnimals.length ? `共 ${dueAnimals.length} 项` : '';
+  const todayEl = document.getElementById('todayTasks');
+  todayEl.innerHTML = dueAnimals.length ? dueAnimals.map(a=>{
+    const dd = daysDiff(a.date);
+    const overdue = dd < 0, soon = dd>=0 && dd<=3;
+    return `<div class="task-item">
+      <div class="task-info">
+        <div class="id" onclick="openDetail('${a.id}')">${a.id} <span class="tag ${a.group.includes('CON')?'con':'int'}">${a.group.split(' ')[0]}</span>${overdue?'<span class="tag overdue">已逾期'+Math.abs(dd)+'天</span>':(soon?'<span class="tag soon">'+(dd===0?'今天':dd+'天后')+'</span>':'')}</div>
+        <div class="meta">计划取材 ${a.date}</div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-primary" onclick="markDone('${a.id}')">一键处理</button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">暂无待处理任务</div>';
+
+  renderGroupChips();
+  const search = (document.getElementById('animalSearch')?.value || '').toLowerCase();
+  let filteredAnimals = db.animals.filter(a=>
+    (groupFilter==='all' || a.group===groupFilter) &&
+    a.id.toLowerCase().includes(search)
+  );
+  document.getElementById('animalListCount').textContent = `(${filteredAnimals.length})`;
+  const atbody = document.querySelector('#animalTable tbody');
+  atbody.innerHTML = filteredAnimals.map(a=>{
+    const dd = daysDiff(a.date);
+    const pillClass = a.status==='done' ? 'green' : (dd<0 ? 'red' : (dd<=3 ? 'orange' : 'gray'));
+    return `<tr>
+      <td style="cursor:pointer;color:var(--teal-dark);font-weight:600;" onclick="openDetail('${a.id}')">${a.id}</td>
+      <td>${a.group.split(' ')[0]}</td><td>${a.date}</td><td>${sampleCount(a.id)}</td>
+      <td><span class="pill ${pillClass}"></span></td>
+      <td>
+        <button class="btn-icon" onclick="editAnimal('${a.id}')" title="编辑">✏️</button>
+        <button class="btn-icon" onclick="deleteAnimal('${a.id}')" title="删除">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('') || '';
+
+  const sAnimalSel = document.getElementById('sAnimal');
+  const prevVal = sAnimalSel.value;
+  sAnimalSel.innerHTML = db.animals.map(a=>`<option value="${a.id}">${a.id} (${a.group.split(' ')[0]})</option>`).join('');
+  if(prevVal) sAnimalSel.value = prevVal;
+
+  const sSearch = (document.getElementById('sampleSearch')?.value || '').toLowerCase();
+  const filteredSamples = db.samples.filter(s=> (s.animal+s.tissue).toLowerCase().includes(sSearch));
+  document.getElementById('sampleListCount').textContent = `(${filteredSamples.length})`;
+  const stbody = document.querySelector('#sampleTable tbody');
+  stbody.innerHTML = filteredSamples.map((s)=>{
+    const i = db.samples.indexOf(s);
+    return `<tr>
+      <td>${s.animal}</td><td>${s.tissue.split(' ')[0]}</td><td>${s.method.split(' ')[0]}</td><td>${s.qty}</td><td>${s.loc||'-'}</td><td>${s.date}</td>
+      <td><button class="btn-icon" onclick="deleteSample(${i})">🗑️</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('sampleEmpty').classList.toggle('hidden', filteredSamples.length>0);
+
+  const doneCount = db.sop.filter(s=>s.done).length;
+  document.getElementById('sopProgress').style.width = (doneCount/db.sop.length*100)+'%';
+  const sopEl = document.getElementById('sopList');
+  sopEl.innerHTML = db.sop.map((item,i)=>`<div class="checklist-item ${item.done?'done':''}">
+    <input type="checkbox" id="sop${i}" ${item.done?'checked':''} onchange="toggleSOP(${i})">
+    <label for="sop${i}">${item.label}</label>
+  </div>`).join('');
+}
+
+function renderGroupChips(){
+  const el = document.getElementById('groupFilterChips');
+  const chips = ['all', ...GROUPS];
+  el.innerHTML = chips.map(g=>`<span class="chip ${groupFilter===g?'active':''}" onclick="setGroupFilter('${g}')">${g==='all'?'全部':g.split(' ')[0]}</span>`).join('');
+}
+function setGroupFilter(g){ groupFilter = g; render(); }
+
+function markDone(id){
+  const a = db.animals.find(x=>x.id===id);
+  if(a){ a.status='done'; }
+  save(`${id} 已标记为已取材`);
+}
+function deleteAnimal(id){
+  if(!confirm(`删除动物档案 ${id}？关联样本记录不会自动删除。`)) return;
+  db.animals = db.animals.filter(a=>a.id!==id);
+  save('已删除档案');
+}
+function editAnimal(id){
+  const a = db.animals.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('aEditId').value = id;
+  document.getElementById('aId').value = a.id;
+  document.getElementById('aGroup').value = a.group;
+  document.getElementById('aSex').value = a.sex;
+  document.getElementById('aDate').value = a.date;
+  document.getElementById('aNotes').value = a.notes;
+  document.getElementById('animalFormTitle').textContent = '✏️ 编辑动物档案';
+  document.getElementById('aSubmitBtn').textContent = '保存修改';
+  document.getElementById('aCancelBtn').classList.remove('hidden');
+  switchView('animals');
+  window.scrollTo(0,0);
+}
+function cancelAnimalEdit(){
+  document.getElementById('animalForm').reset();
+  document.getElementById('aEditId').value = '';
+  document.getElementById('animalFormTitle').textContent = '🗂 新增动物档案';
+  document.getElementById('aSubmitBtn').textContent = '新增档案';
+  document.getElementById('aCancelBtn').classList.add('hidden');
+}
+function deleteSample(i){ db.samples.splice(i,1); save('已删除样本记录'); }
+function toggleSOP(i){ db.sop[i].done = !db.sop[i].done; save(); }
+function resetSOP(){ db.sop.forEach(s=>s.done=false); save('SOP已重置'); }
+
+function openDetail(id){
+  const a = db.animals.find(x=>x.id===id);
+  if(!a) return;
+  const samples = db.samples.filter(s=>s.animal===id);
+  document.getElementById('detailBody').innerHTML = `
+    <h3>${a.id} 详情</h3>
+    <div class="detail-row"><span>分组</span><span>${a.group}</span></div>
+    <div class="detail-row"><span>性别</span><span>${a.sex}</span></div>
+    <div class="detail-row"><span>计划日期</span><span>${a.date}</span></div>
+    <div class="detail-row"><span>状态</span><span>${a.status==='done'?'✅ 已取材':'⏳ 待处理'}</span></div>
+    <div class="detail-row"><span>备注</span><span>${a.notes||'-'}</span></div>
+    <h3 style="margin-top:16px;">关联样本 (${samples.length})</h3>
+    ${samples.length ? samples.map(s=>`<div class="detail-row"><span>${s.tissue.split(' ')[0]} · ${s.method.split(' ')[0]}</span><span>${s.date}</span></div>`).join('') : '<div class="empty">暂无样本</div>'}
+  `;
+  document.getElementById('detailModal').classList.remove('hidden');
+}
+function closeModal(){ document.getElementById('detailModal').classList.add('hidden'); }
+
+document.getElementById('animalForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const editId = document.getElementById('aEditId').value;
+  const aDateVal = document.getElementById('aDate').value.trim();
+  if(!isValidDate(aDateVal)){ alert('请输入正确的日期格式 YYYY-MM-DD'); return; }
+  const payload = {
+    id: document.getElementById('aId').value.trim(),
+    group: document.getElementById('aGroup').value,
+    sex: document.getElementById('aSex').value,
+    date: aDateVal,
+    notes: document.getElementById('aNotes').value,
+  };
+  if(editId){
+    const a = db.animals.find(x=>x.id===editId);
+    Object.assign(a, payload);
+    cancelAnimalEdit();
+    save('档案已更新');
+  } else {
+    if(db.animals.some(a=>a.id===payload.id)){ alert('该动物编号已存在'); return; }
+    db.animals.push({...payload, status:'pending'});
+    e.target.reset();
+    save('档案已新增');
+  }
+});
+
+document.getElementById('sampleForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const sDateVal = document.getElementById('sDate').value.trim();
+  if(!isValidDate(sDateVal)){ alert('请输入正确的日期格式 YYYY-MM-DD'); return; }
+  db.samples.push({
+    animal: document.getElementById('sAnimal').value,
+    tissue: document.getElementById('sTissue').value,
+    method: document.getElementById('sMethod').value,
+    qty: document.getElementById('sQty').value,
+    loc: document.getElementById('sLoc').value,
+    date: sDateVal
+  });
+  e.target.reset();
+  save('取材记录已保存');
+  switchView('samples');
+});
+
+document.getElementById('animalSearch').addEventListener('input', render);
+document.getElementById('sampleSearch').addEventListener('input', render);
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `sampling_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+function exportCSV(){
+  let rows = [['AnimalID','Group','Sex','PlannedDate','Status','Tissue','Method','Qty','Location','SampleDate']];
+  db.animals.forEach(a=>{
+    const s = db.samples.filter(x=>x.animal===a.id);
+    if(s.length===0){ rows.push([a.id,a.group,a.sex,a.date,a.status,'','','','','']); }
+    else s.forEach(x=>rows.push([a.id,a.group,a.sex,a.date,a.status,x.tissue,x.method,x.qty,x.loc||'',x.date]));
+  });
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `sampling_export_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+function importData(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try{ db = JSON.parse(evt.target.result); save('导入成功'); }
+    catch(err){ alert('文件格式错误'); }
+  };
+  reader.readAsText(file);
+}
+function clearData(){
+  if(confirm('确定清空所有数据吗？此操作无法撤销。')){
+    db = {animals:[], samples:[], sop: db.sop.map(s=>({...s, done:false}))};
+    save('数据已清空');
+  }
+}
+
+function switchView(view){
+  document.querySelectorAll('[id^="view-"]').forEach(v=>v.classList.add('hidden'));
+  document.getElementById('view-'+view).classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
+}
+document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click', ()=>switchView(b.dataset.view)));
+
+render();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  });
+}
+</script>
+</body>
+</html>
